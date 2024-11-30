@@ -1,6 +1,6 @@
 # dimes
 
-A new Flutter project.
+A Flutter project designed for stat tracking during volleyball training.
 
 ## Getting Started
 

@@ -1,4 +1,4 @@
-import 'package:english_words/english_words.dart';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -26,33 +26,31 @@ class MyApp extends StatelessWidget {
 }
 
 class MyAppState extends ChangeNotifier {
-  var current = WordPair.random();
+  var passAttempts = <int>[]; // array to track a single players passing stats
 
-  void getNext() {
-    current = WordPair.random();
+  void newAttempt(rating) {
+    passAttempts.add(rating);
     notifyListeners();
   }
 
-  var favorites = <WordPair>[];
-
-  void toggleFavorite() {
-    if (favorites.contains(current)) {
-      favorites.remove(current);
-    } else {
-      favorites.add(current);
+  // TODO: add argument to select each player
+  double passRating() {
+    if (passAttempts.isEmpty) {
+      return -1;
     }
-    notifyListeners();
+    return (passAttempts.reduce((a,b) => a+b).toDouble())/passAttempts.length;
   }
 
-  void removeFav(WordPair fav) {
-    if (favorites.contains(fav)) {
-      favorites.remove(fav);
-      notifyListeners();
-    }
-    else {
+  // TODO: add argument to select each player
+  void undoLastAttempt() {
+    if (passAttempts.isEmpty) {
       return;
+    } else {
+      passAttempts.removeLast();
     }
+    notifyListeners();
   }
+
 }
 
 class MyHomePage extends StatefulWidget {
@@ -63,7 +61,6 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
 
   var selectedIndex = 0;
-
   @override
   Widget build(BuildContext context) {
 
@@ -73,21 +70,23 @@ class _MyHomePageState extends State<MyHomePage> {
         page = GeneratorPage();
         break;
       case 1:
-        page = FavoritesPage();
+        page = Placeholder();
         break;
       default:
         throw UnimplementedError("No widget for $selectedIndex");
     }
-
+    var deviceOrientation = MediaQuery.of(context).orientation;
     return LayoutBuilder(
       builder: (context,constraints) {
+        bool isExtended = deviceOrientation == Orientation.landscape;
         return Scaffold(
           body: Row(
             children: [
-              Expanded(
+              SizedBox(
+                width: isExtended ? 150 : 72, // Extended in landscape, collapsed in portrait
                 child: SafeArea( // ensures its children are not obscured by status bar or hardware notch
                   child: NavigationRail(
-                    extended: constraints.maxWidth >=600, // shows labels next to the icons
+                    extended: isExtended, // shows labels next to the icons
                     destinations: [
                       NavigationRailDestination(
                         icon: Icon(Icons.home),
@@ -120,107 +119,62 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 }
-class FavoritesPage extends StatelessWidget{
-  @override 
-  Widget build(BuildContext context) {
-    var appState = context.watch<MyAppState>();
-     
-     if (appState.favorites.isEmpty) {
-      return Center(
-        child: Icon(
-          Icons.inventory_2_outlined,
-          size: 200),
-          
-      );
-     }
-     return Center(
-      child: ListView(
-        padding: const EdgeInsets.all(8), // idk
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Text('You have ${appState.favorites.length} favorites'),
-            ),
-          
-          for (var fav in appState.favorites)
-            ListTile(
-              leading: Icon(Icons.favorite),
-              title: Text(fav.asString),
-              onLongPress: () {
-                appState.removeFav(fav);
-              }
-            ),
-        ],
-      )
-     );
-  }
-}
+
 class GeneratorPage extends StatelessWidget {
+
   @override
   Widget build(BuildContext context) {
     var appState = context.watch<MyAppState>();
-    var pair = appState.current;
-
-    IconData icon;
-    if (appState.favorites.contains(pair)) {
-      icon = Icons.favorite;
-    } else {
-      icon = Icons.favorite_border;
-    }
 
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          BigCard(pair: pair),
-          SizedBox(height: 10),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ElevatedButton.icon(
-                onPressed: () {
-                  appState.toggleFavorite();
-                },
-                icon: Icon(icon),
-                label: Text('Like'),
-              ),
-              SizedBox(width: 10),
-              ElevatedButton(
-                onPressed: () {
-                  appState.getNext();
-                },
-                child: Text('Next'),
-              ),
-            ],
+          Expanded(
+            child: GridView.count(
+              crossAxisCount: 2,
+              children: List.generate(5,(rating) {
+                return Center(
+                  child: passRating(rate: rating),
+                );
+              }),
+            ),
           ),
         ],
-      ),
+      )
     );
   }
 }
 
-class BigCard extends StatelessWidget {
-  const BigCard({
+
+class passRating extends StatelessWidget {
+  const passRating({
     super.key,
-    required this.pair,
+    required this.rate,
   });
 
-  final WordPair pair;
+  final int rate;
 
   @override
   Widget build(BuildContext context) {
+
+    var appState = context.watch<MyAppState>();
+    // TODO: implement build
     final theme = Theme.of(context);
-    final style = theme.textTheme.displayMedium!.copyWith(
-      color: theme.colorScheme.onPrimary,
-    );
+    final style = theme.textTheme.displayLarge!.copyWith(color: theme.colorScheme.secondary);
+
     return Card(
       color: theme.colorScheme.primary,
-      elevation: 20.0,
+      elevation: 10,
       child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Text(pair.asLowerCase,
-            style: style, semanticsLabel: "${pair.first} ${pair.second}"),
-      ),
+        padding: const EdgeInsets.all(8.0),
+        child: ElevatedButton(onPressed: () {
+          appState.newAttempt(rate);
+        },
+        child: Text("$rate",style: style,),
+        ),
+        ),
     );
   }
+
 }
