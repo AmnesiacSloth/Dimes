@@ -1,6 +1,5 @@
-
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter/services.dart';
 
 void main() {
   runApp(MyApp());
@@ -11,170 +10,196 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => MyAppState(),
-      child: MaterialApp(
-        title: 'Dimes',
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
+    // TODO: implement build
+    return MaterialApp(
+      home: Scaffold(
+        appBar: AppBar(
+          title: Text("Dimes"),
+          centerTitle: true,
+          toolbarHeight: 30,
+          forceMaterialTransparency: true, // Doesn't change color on scroll
         ),
-        home: MyHomePage(),
+        body: Center(
+          child: Row(
+            children: [
+              ScrollablePlayerSelector(),
+              GeneratedPage(),
+            ],
+          ),
+        ),
       ),
     );
   }
 }
 
-class MyAppState extends ChangeNotifier {
-  var passAttempts = <int>[]; // array to track a single players passing stats
-
-  void newAttempt(rating) {
-    passAttempts.add(rating);
-    notifyListeners();
-  }
-
-  // TODO: add argument to select each player
-  double passRating() {
-    if (passAttempts.isEmpty) {
-      return -1;
-    }
-    return (passAttempts.reduce((a,b) => a+b).toDouble())/passAttempts.length;
-  }
-
-  // TODO: add argument to select each player
-  void undoLastAttempt() {
-    if (passAttempts.isEmpty) {
-      return;
-    } else {
-      passAttempts.removeLast();
-    }
-    notifyListeners();
-  }
-
-}
-
-class MyHomePage extends StatefulWidget {
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-
-  var selectedIndex = 0;
-  @override
-  Widget build(BuildContext context) {
-
-    Widget page;
-    switch (selectedIndex) {
-      case 0:
-        page = GeneratorPage();
-        break;
-      case 1:
-        page = Placeholder();
-        break;
-      default:
-        throw UnimplementedError("No widget for $selectedIndex");
-    }
-    var deviceOrientation = MediaQuery.of(context).orientation;
-    return LayoutBuilder(
-      builder: (context,constraints) {
-        bool isExtended = deviceOrientation == Orientation.landscape;
-        return Scaffold(
-          body: Row(
-            children: [
-              SizedBox(
-                width: isExtended ? 150 : 72, // Extended in landscape, collapsed in portrait
-                child: SafeArea( // ensures its children are not obscured by status bar or hardware notch
-                  child: NavigationRail(
-                    extended: isExtended, // shows labels next to the icons
-                    destinations: [
-                      NavigationRailDestination(
-                        icon: Icon(Icons.home),
-                        label: Text('Home'),
-                      ),
-                      NavigationRailDestination(
-                        icon: Icon(Icons.favorite),
-                        label: Text('Favorites'),
-                      ),
-                    ],
-                    selectedIndex: selectedIndex, // determines which destination to go to from nav rail
-                    onDestinationSelected: (value) {
-                      setState(() {
-                        selectedIndex = value;
-                      });
-                    },
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Container(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  child: page,
-                ),
-              ),
-            ],
-          ),
-        );
-      }
-    );
-  }
-}
-
-class GeneratorPage extends StatelessWidget {
-
-  @override
-  Widget build(BuildContext context) {
-    var appState = context.watch<MyAppState>();
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Expanded(
-            child: GridView.count(
-              crossAxisCount: 2,
-              children: List.generate(5,(rating) {
-                return Center(
-                  child: passRating(rate: rating),
-                );
-              }),
-            ),
-          ),
-        ],
-      )
-    );
-  }
-}
-
-
-class passRating extends StatelessWidget {
-  const passRating({
+class GeneratedPage extends StatelessWidget {
+  const GeneratedPage({
     super.key,
-    required this.rate,
   });
 
-  final int rate;
+  @override
+  Widget build(BuildContext context) {
+    return Flexible(
+        flex: 5,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Expanded(
+              child: SafeArea(
+                top: false,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    PassRatings(),
+                    CurrentStats(),
+                    LifetimeStats(),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ));
+  }
+}
+
+class PassRatings extends StatelessWidget {
+  const PassRatings({
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
+    // consider breakng this whole build function up
+    var isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
 
-    var appState = context.watch<MyAppState>();
-    // TODO: implement build
-    final theme = Theme.of(context);
-    final style = theme.textTheme.displayLarge!.copyWith(color: theme.colorScheme.secondary);
+    // create text theme for the rating labels
+    final TextStyle textStyling =
+        Theme.of(context).textTheme.headlineLarge!.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            );
+    return Expanded(
+      flex: 3,
+      child: LayoutBuilder(builder: (context, constraints) {
+        final double itemHeight = constraints.maxHeight /
+            (isLandscape
+                ? 1
+                : 2); // / 1 becaue 1 row in landscape, 2 in portrait
+        final double itemWidth = constraints.maxWidth /
+            (isLandscape
+                ? 4
+                : 2); // divide by 4 since 4 in a row (landscape) or 2 in a row (portrait)
+        final double childAspectRatio = itemWidth /
+            itemHeight; // Defines the width to height ratio of the grid items per device sizing, no hardcoding
 
-    return Card(
-      color: theme.colorScheme.primary,
-      elevation: 10,
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: ElevatedButton(onPressed: () {
-          appState.newAttempt(rate);
-        },
-        child: Text("$rate",style: style,),
-        ),
-        ),
+        return GridView.count(
+          padding: EdgeInsets.symmetric(horizontal: 12),
+          childAspectRatio: childAspectRatio,
+          physics: NeverScrollableScrollPhysics(),
+          shrinkWrap: true,
+          crossAxisCount: isLandscape ? 4 : 2,
+          mainAxisSpacing: 16,
+          crossAxisSpacing: 16,
+          children: List.generate(4, (index) {
+            return Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                color: Colors.green,
+              ),
+              child: Center(
+                child: Text("$index", style: textStyling),
+              ),
+            );
+          }),
+        );
+      }),
     );
   }
+}
 
+class LifetimeStats extends StatelessWidget {
+  const LifetimeStats({
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // create text theme for the rating labels
+    final TextStyle textStyling =
+        Theme.of(context).textTheme.headlineLarge!.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            );
+    return Expanded(
+      flex: 2,
+      child: Container(
+        //padding: EdgeInsets.symmetric(horizontal: 15),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(25),
+          color: Colors.blue,
+        ),
+        height: double.infinity,
+        width: double.infinity,
+        child: Center(
+          child: Text(
+            "Lifetime Stats: 200/ 315 -- idk this fraction",
+            style: textStyling,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class CurrentStats extends StatelessWidget {
+  const CurrentStats({
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // create text theme for the rating labels
+    final TextStyle textStyling =
+        Theme.of(context).textTheme.headlineLarge!.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            );
+    return Expanded(
+      flex: 2,
+      child: Container(
+        height: double.infinity,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.deepOrange,
+          borderRadius: BorderRadius.circular(25),
+        ),
+        child: Center(
+          child: Text(
+            "Current Stats: 15/20 -- 2.5",
+            style: textStyling,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ScrollablePlayerSelector extends StatelessWidget {
+  const ScrollablePlayerSelector({
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Flexible(
+      flex: 1,
+      child: ListView.builder(
+        itemCount: 10,
+        itemBuilder: (context, index) => ListTile(
+          title: Text(index.toString()),
+        ),
+      ),
+    );
+  }
 }
