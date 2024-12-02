@@ -2,15 +2,22 @@ import 'package:flutter/material.dart';
 
 List<int> passRatings = <int>[];
 
-void appendAttempt(int rating) {
-  passRatings.add(rating);
-  print(rating);
-}
-
-class PassRatings extends StatelessWidget {
+class PassRatings extends StatefulWidget {
   const PassRatings({
     super.key,
   });
+
+  @override
+  State<PassRatings> createState() => _PassRatingsState();
+}
+
+class _PassRatingsState extends State<PassRatings> {
+  void appendAttempt(int rating) {
+    setState(() {
+      passRatings.add(rating);
+      print(rating);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,24 +54,39 @@ class PassRatings extends StatelessWidget {
           mainAxisSpacing: 16,
           crossAxisSpacing: 16,
           children: List.generate(4, (index) {
-            return GestureDetector(
-              onTap: () => appendAttempt(index),
-              child: Container(
-                decoration: BoxDecoration(
+            return ElevatedButton(
+              onPressed: () => appendAttempt(index),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blueGrey[500],
+                shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
-                  color: Colors.blueGrey[500],
-                ),
-                child: Center(
-                  child: Text("$index", style: textStyling),
                 ),
               ),
+              child: Text(
+                "$index",
+                style: textStyling,
+              ),
             );
+            // return GestureDetector(
+            //   onTap: () => appendAttempt(index),
+            //   child: Container(
+            //     decoration: BoxDecoration(
+            //       borderRadius: BorderRadius.circular(10),
+            //       color: Colors.blueGrey[500],
+            //     ),
+            //     child: Center(
+            //       child: Text("$index", style: textStyling),
+            //     ),
+            //   ),
+            // );
           }),
         );
       }),
     );
   }
 }
+
+// Functions
 
 class CurrentStats extends StatelessWidget {
   const CurrentStats({
@@ -73,6 +95,13 @@ class CurrentStats extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    int attempts = passRatings.length;
+    int sumOfAttempts = passRatings.isEmpty
+        ? 0
+        : (passRatings
+            .reduce((a, b) => a + b)); // ternary operator in case of empty list
+    String currStats = (sumOfAttempts.toDouble() / attempts)
+        .toStringAsFixed(2); // total count / attempts rounded to 2 dec points
     // create text theme for the rating labels
     final TextStyle textStyling =
         Theme.of(context).textTheme.headlineLarge!.copyWith(
@@ -90,7 +119,7 @@ class CurrentStats extends StatelessWidget {
         ),
         child: Center(
           child: Text(
-            "Current Stats: 15/20 -- 2.5",
+            "Current Stats: $sumOfAttempts/$attempts -- $currStats",
             style: textStyling,
             textAlign: TextAlign.center,
           ),
